@@ -8,7 +8,7 @@ Created on Thu May 29 08:54:07 2025
 
 import plotly.express as px
 
-# Load data (if not already loaded)
+
 import pandas as pd
 df = pd.read_csv("../data/train.csv")
 
