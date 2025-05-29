@@ -2,7 +2,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
-
+import plotly.express as px
 
 # Load data
 df = pd.read_csv("../data/train.csv")
@@ -46,7 +46,7 @@ plt.show()
 top_products = df.groupby('Product Name')['Sales'].sum().nlargest(5)
 
 plt.figure(figsize=(10, 6))
-ax = top_products.plot(kind='barh', color='purple')
+ax = top_products.plot(kind='barh', color='blue')
 plt.title("Top 5 Profitable Products", pad=20)
 
 # Customize labels and margins
@@ -56,3 +56,12 @@ plt.subplots_adjust(left=0.3, bottom=0.1)
 plt.savefig("../visuals/top_products.png", bbox_inches='tight', dpi=300)
 plt.show()
 
+
+fig = px.bar(top_products,
+             x=top_products.values,
+             y=top_products.index,
+             title="Top 5 Profitable Products (Interactive)",
+             labels={'x': 'Profit ($)', 'y': 'Product'},
+             color_discrete_sequence=['purple'])
+fig.write_html("../visuals/top_products_interactive.html")
+fig.show()
