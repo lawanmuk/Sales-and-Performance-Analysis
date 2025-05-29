@@ -43,10 +43,16 @@ plt.xticks(rotation=45)
 plt.savefig("../visuals/monthly_sales.png")
 plt.show()
 
-top_products = df.groupby('Product Name')['Profit'].sum().nlargest(5)
+top_products = df.groupby('Product Name')['Sales'].sum().nlargest(5)
 
-# Plot
-top_products.plot(kind='barh', color='purple')
-plt.title("Top 5 Profitable Products")
-plt.savefig("../visuals/top_products.png")
+plt.figure(figsize=(10, 6))
+ax = top_products.plot(kind='barh', color='purple')
+plt.title("Top 5 Profitable Products", pad=20)
+
+# Customize labels and margins
+ax.set_xlabel("Profit ($)", labelpad=10)
+plt.subplots_adjust(left=0.3, bottom=0.1)
+
+plt.savefig("../visuals/top_products.png", bbox_inches='tight', dpi=300)
 plt.show()
+
