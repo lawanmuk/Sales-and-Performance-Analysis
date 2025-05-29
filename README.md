@@ -14,4 +14,5 @@ A data analysis project exploring sales trends, top products, and customer behav
 ## 🚀 How to Run  
 1. Clone the repo.  
 2. Install dependencies: `pip install pandas matplotlib`.  
-3. Run `sales_analysis.ipynb`.  
+3. Run `sales_analysis.py`.
+4. Run `interactive_sales_analysis.py`.
