@@ -1,17 +1,26 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-import numpy as np
 import plotly.express as px
 
 # Load data
-df = pd.read_csv("../data/train.csv")
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+DATA_PATH = BASE_DIR / "data" / "train.csv"
+VISUALS_DIR = BASE_DIR / "visuals"
+
+df = pd.read_csv(DATA_PATH)
 
 print(df.head())
 
 # Check for missing values
 print("\nMissing values:\n", df.isnull().sum())
 
+# Convert 'Order Date' to datetime
+df = pd.read_csv(DATA_PATH)
+
+# Extract year/month for analysis
 # Convert 'Order Date' to datetime
 df['Order Date'] = pd.to_datetime(df['Order Date'], dayfirst=True)
 
@@ -28,7 +37,7 @@ sales_by_category.plot(kind='bar', color=['skyblue', 'orange', 'green'])
 plt.title("Total Sales by Category")
 plt.xlabel("Category")
 plt.ylabel("Sales ($)")
-plt.savefig("../visuals/sales_by_category.png")
+plt.savefig(VISUALS_DIR / "sales_by_category.png")
 plt.show()
 
 
@@ -40,7 +49,7 @@ plt.figure(figsize=(12, 6))
 sns.lineplot(data=monthly_sales, x='Month', y='Sales', hue='Year', marker='o')
 plt.title("Monthly Sales Trend")
 plt.xticks(rotation=45)
-plt.savefig("../visuals/monthly_sales.png")
+plt.savefig(VISUALS_DIR / "monthly_sales.png")
 plt.show()
 
 top_products = df.groupby('Product Name')['Sales'].sum().nlargest(5)
@@ -53,7 +62,7 @@ plt.title("Top 5 Profitable Products", pad=20)
 ax.set_xlabel("Profit ($)", labelpad=10)
 plt.subplots_adjust(left=0.3, bottom=0.1)
 
-plt.savefig("../visuals/top_products.png", bbox_inches='tight', dpi=300)
+plt.savefig(VISUALS_DIR / "top_products.png", bbox_inches='tight', dpi=300)
 plt.show()
 
 
@@ -63,5 +72,5 @@ fig = px.bar(top_products,
              title="Top 5 Profitable Products (Interactive)",
              labels={'x': 'Profit ($)', 'y': 'Product'},
              color_discrete_sequence=['purple'])
-fig.write_html("../visuals/top_products_interactive.html")
+fig.write_html(VISUALS_DIR / "top_products_interactive.html")
 fig.show()
