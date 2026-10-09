@@ -1,76 +1,120 @@
-import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
-import plotly.express as px
+"""Sales performance analysis for the Superstore dataset.
 
-# Load data
+Run from anywhere:
+    python scripts/sales_analysis.py            # save charts and show them
+    python scripts/sales_analysis.py --no-show  # save charts only
+"""
+
+import sys
 from pathlib import Path
+
+import matplotlib.pyplot as plt
+import matplotlib.ticker as mticker
+import pandas as pd
+import plotly.express as px
+import seaborn as sns
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_PATH = BASE_DIR / "data" / "train.csv"
 VISUALS_DIR = BASE_DIR / "visuals"
 
-df = pd.read_csv(DATA_PATH)
-
-print(df.head())
-
-# Check for missing values
-print("\nMissing values:\n", df.isnull().sum())
-
-# Convert 'Order Date' to datetime
-df = pd.read_csv(DATA_PATH)
-
-# Extract year/month for analysis
-# Convert 'Order Date' to datetime
-df['Order Date'] = pd.to_datetime(df['Order Date'], dayfirst=True)
-
-# Extract year/month for analysis
-df['Year'] = df['Order Date'].dt.year
-df['Month'] = df['Order Date'].dt.month_name()
-
-# Group by category
-sales_by_category = df.groupby('Category')['Sales'].sum().sort_values(ascending=False)
-
-# Plot
-plt.figure(figsize=(10, 6))
-sales_by_category.plot(kind='bar', color=['skyblue', 'orange', 'green'])
-plt.title("Total Sales by Category")
-plt.xlabel("Category")
-plt.ylabel("Sales ($)")
-plt.savefig(VISUALS_DIR / "sales_by_category.png")
-plt.show()
+MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+DOLLARS = mticker.StrMethodFormatter("${x:,.0f}")
 
 
-# Group by month/year
-monthly_sales = df.groupby(['Year', 'Month'])['Sales'].sum().reset_index()
-
-# Plot
-plt.figure(figsize=(12, 6))
-sns.lineplot(data=monthly_sales, x='Month', y='Sales', hue='Year', marker='o')
-plt.title("Monthly Sales Trend")
-plt.xticks(rotation=45)
-plt.savefig(VISUALS_DIR / "monthly_sales.png")
-plt.show()
-
-top_products = df.groupby('Product Name')['Sales'].sum().nlargest(5)
-
-plt.figure(figsize=(10, 6))
-ax = top_products.plot(kind='barh', color='blue')
-plt.title("Top 5 Profitable Products", pad=20)
-
-# Customize labels and margins
-ax.set_xlabel("Profit ($)", labelpad=10)
-plt.subplots_adjust(left=0.3, bottom=0.1)
-
-plt.savefig(VISUALS_DIR / "top_products.png", bbox_inches='tight', dpi=300)
-plt.show()
+def load_data(path: Path) -> pd.DataFrame:
+    """Load the CSV, parse dates and add Year and Month columns."""
+    df = pd.read_csv(path)
+    df["Order Date"] = pd.to_datetime(df["Order Date"], dayfirst=True)
+    df["Year"] = df["Order Date"].dt.year
+    df["Month"] = df["Order Date"].dt.month  # 1 to 12, so months sort correctly
+    return df
 
 
-fig = px.bar(top_products,
-             x=top_products.values,
-             y=top_products.index,
-             title="Top 5 Profitable Products (Interactive)",
-             labels={'x': 'Profit ($)', 'y': 'Product'},
-             color_discrete_sequence=['purple'])
-fig.write_html(VISUALS_DIR / "top_products_interactive.html")
-fig.show()
+def plot_sales_by_category(df: pd.DataFrame, show: bool) -> None:
+    sales = df.groupby("Category")["Sales"].sum().sort_values(ascending=False)
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+    sales.plot(kind="bar", color=["skyblue", "orange", "green"], ax=ax)
+    ax.set_title("Total Sales by Category")
+    ax.set_xlabel("Category")
+    ax.set_ylabel("Sales")
+    ax.yaxis.set_major_formatter(DOLLARS)
+    ax.tick_params(axis="x", rotation=0)
+    fig.tight_layout()
+    fig.savefig(VISUALS_DIR / "sales_by_category.png", dpi=150)
+    if show:
+        plt.show()
+    plt.close(fig)
+
+
+def plot_monthly_sales(df: pd.DataFrame, show: bool) -> None:
+    monthly = df.groupby(["Year", "Month"])["Sales"].sum().reset_index()
+
+    fig, ax = plt.subplots(figsize=(12, 6))
+    sns.lineplot(data=monthly, x="Month", y="Sales", hue="Year",
+                 palette="tab10", marker="o", ax=ax)
+    ax.set_title("Monthly Sales Trend by Year")
+    ax.set_xlabel("Month")
+    ax.set_ylabel("Sales")
+    ax.set_xticks(range(1, 13), MONTH_LABELS)
+    ax.yaxis.set_major_formatter(DOLLARS)
+    fig.tight_layout()
+    fig.savefig(VISUALS_DIR / "monthly_sales.png", dpi=150)
+    if show:
+        plt.show()
+    plt.close(fig)
+
+
+def top_products(df: pd.DataFrame, n: int = 5) -> pd.Series:
+    return df.groupby("Product Name")["Sales"].sum().nlargest(n)
+
+
+def plot_top_products(df: pd.DataFrame, show: bool) -> None:
+    top = top_products(df)
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+    top.plot(kind="barh", color="steelblue", ax=ax)
+    ax.invert_yaxis()  # biggest seller at the top
+    ax.set_title("Top 5 Products by Sales", pad=20)
+    ax.set_xlabel("Sales", labelpad=10)
+    ax.set_ylabel("")
+    ax.xaxis.set_major_formatter(DOLLARS)
+    fig.savefig(VISUALS_DIR / "top_products.png", bbox_inches="tight", dpi=300)
+    if show:
+        plt.show()
+    plt.close(fig)
+
+
+def plot_top_products_interactive(df: pd.DataFrame, show: bool) -> None:
+    top = top_products(df).reset_index()
+
+    fig = px.bar(top, x="Sales", y="Product Name",
+                 title="Top 5 Products by Sales (Interactive)",
+                 color="Sales", color_continuous_scale="reds")
+    fig.update_layout(xaxis_title="Sales ($)", yaxis_title="Product",
+                      yaxis={"categoryorder": "total ascending"},
+                      hovermode="y unified")
+    fig.write_html(VISUALS_DIR / "top_products_interactive.html")
+    if show:
+        fig.show()
+
+
+def main() -> None:
+    show = "--no-show" not in sys.argv
+    VISUALS_DIR.mkdir(exist_ok=True)
+
+    df = load_data(DATA_PATH)
+    print(df.head())
+    print("\nMissing values:\n", df.isnull().sum())
+
+    plot_sales_by_category(df, show)
+    plot_monthly_sales(df, show)
+    plot_top_products(df, show)
+    plot_top_products_interactive(df, show)
+    print(f"\nCharts saved to {VISUALS_DIR}")
+
+
+if __name__ == "__main__":
+    main()
