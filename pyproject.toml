@@ -18,6 +18,9 @@ dependencies = [
     "seaborn>=0.13.2",
 ]
 
+[project.optional-dependencies]
+dashboard = ["streamlit>=1.50"]
+
 [project.scripts]
 sales-analysis = "sales_analysis.cli:main"
 
