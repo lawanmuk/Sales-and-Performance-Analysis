@@ -15,6 +15,10 @@ DEFAULT_DATA = Path("data/train.csv")
 DEFAULT_OUTPUT = Path("visuals")
 
 
+MONTHS = ["January", "February", "March", "April", "May", "June", "July",
+          "August", "September", "October", "November", "December"]
+
+
 def _print_summary(df) -> None:
     s = metrics.summary(df)
     print(f"Orders from {s['first_order']} to {s['last_order']}")
@@ -22,6 +26,22 @@ def _print_summary(df) -> None:
     print(f"Orders:           {s['orders']:,}")
     print(f"Customers:        {s['customers']:,}")
     print(f"Avg order value:  ${s['avg_order_value']:,.2f}")
+
+    i = metrics.insights(df)
+    print("\nKey insights")
+    print(f"- {i['top_category']} is the top category "
+          f"({i['top_category_share']:.0f}% of sales).")
+    print(f"- {MONTHS[i['best_month'] - 1]} is the best month, "
+          f"{i['best_month_vs_avg']:.0f}% above the monthly average.")
+    print(f"- Sales grew {i['latest_growth']:.1f}% in {i['latest_year']}.")
+    print(f"- The {i['top_region']} region leads with "
+          f"{i['top_region_share']:.0f}% of sales.")
+    print(f"- {i['top_segment']} customers bring in "
+          f"{i['top_segment_share']:.0f}% of sales.")
+    print(f"- {i['products_for_80pct']:.0f}% of products make up 80% of sales.")
+    print(f"- Champion customers (RFM) bring in {i['champions_share']:.0f}% of sales.")
+    print(f"- Standard Class orders take {i['standard_ship_days']:.1f} days "
+          f"to ship on average.")
 
 
 def cmd_run(args) -> None:
