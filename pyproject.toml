@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sales-analysis"
+version = "0.2.0"
+description = "Sales performance analysis of the Superstore dataset"
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [{ name = "Mukhtar Lawan" }]
+requires-python = ">=3.10"
+dependencies = [
+    "matplotlib>=3.9",
+    "numpy>=2.1",
+    "pandas>=2.2.3",
+    "plotly>=6.1",
+    "seaborn>=0.13.2",
+]
+
+[project.scripts]
+sales-analysis = "sales_analysis.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
