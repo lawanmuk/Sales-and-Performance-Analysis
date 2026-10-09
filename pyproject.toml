@@ -16,7 +16,6 @@ dependencies = [
     "pandas>=2.2.3",
     "plotly>=6.1",
     "seaborn>=0.13.2",
-     "seaborn>=0.13.2",
     "statsmodels>=0.14",
 ]
 
