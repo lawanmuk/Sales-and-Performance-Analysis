@@ -6,13 +6,14 @@ chart there and returns the path of the saved file.
 
 from pathlib import Path
 
+import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
 import pandas as pd
 import plotly.express as px
 import seaborn as sns
 
-from sales_analysis import metrics
+from sales_analysis import forecast, metrics
 
 MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
                 "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
@@ -285,6 +286,34 @@ def pareto_curve(df: pd.DataFrame, out_dir: Path, show: bool = False) -> Path:
     return _finish(fig, out_dir / "pareto_curve.png", show)
 
 
+# ================================================================ forecast
+
+def sales_forecast(df: pd.DataFrame, out_dir: Path, show: bool = False) -> Path:
+    result = forecast.run_forecast(df)
+    history = result.history.iloc[-24:]  # last two years for context
+    fc = result.forecast
+    error = result.backtest.loc[0, "MAPE %"]
+
+    fig, ax = plt.subplots(figsize=(12, 6))
+    ax.plot(history.index, history.values, color=ACCENT, linewidth=2,
+            marker="o", markersize=5, label="Actual")
+    # Join the forecast to the last actual month so the line is continuous
+    joined_x = [history.index[-1], *fc["Month"]]
+    joined_y = [history.iloc[-1], *fc["Forecast"]]
+    ax.plot(joined_x, joined_y, color=PALETTE[1], linewidth=2, linestyle="--",
+            marker="o", markersize=5, label=f"Forecast ({result.model})")
+    ax.fill_between(fc["Month"], fc["Lower"], fc["Upper"], color=PALETTE[1],
+                    alpha=0.15, linewidth=0, label="80% range")
+    ax.set_title(f"6 Month Sales Forecast (backtest error {error:.0f}% on 2018)")
+    ax.set_ylabel("Sales")
+    ax.yaxis.set_major_formatter(DOLLARS_K)
+    ax.xaxis.set_major_locator(mdates.MonthLocator(bymonth=[1, 4, 7, 10]))
+    ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %Y"))
+    ax.legend(loc="upper left")
+    _value_grid(ax)
+    return _finish(fig, out_dir / "sales_forecast.png", show)
+
+
 ALL_CHARTS = [
     sales_by_category,
     monthly_sales, yearly_growth, seasonality_heatmap,
@@ -292,4 +321,5 @@ ALL_CHARTS = [
     sales_by_segment, rfm_segments,
     shipping_times,
     top_products, top_products_interactive, subcategory_sales, pareto_curve,
+    sales_forecast,
 ]

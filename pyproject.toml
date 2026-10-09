@@ -16,13 +16,19 @@ dependencies = [
     "pandas>=2.2.3",
     "plotly>=6.1",
     "seaborn>=0.13.2",
+     "seaborn>=0.13.2",
+    "statsmodels>=0.14",
 ]
 
 [project.optional-dependencies]
 dashboard = ["streamlit>=1.50"]
+sql = ["duckdb>=1.1"]
 
 [project.scripts]
 sales-analysis = "sales_analysis.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+sales_analysis = ["queries/*.sql"]
