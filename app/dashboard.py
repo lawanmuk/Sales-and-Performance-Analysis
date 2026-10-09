@@ -10,7 +10,7 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-from sales_analysis import metrics
+from sales_analysis import forecast, metrics
 from sales_analysis.data import load_data
 from sales_analysis.filters import filter_sales, previous_period
 from sales_analysis.plots import BLUES, MONTH_LABELS, PALETTE
@@ -25,6 +25,14 @@ st.set_page_config(page_title="Sales Dashboard", page_icon="📊", layout="wide"
 @st.cache_data
 def get_data() -> pd.DataFrame:
     return load_data(DATA_PATH)
+
+
+@st.cache_data(show_spinner="Fitting forecast models...")
+def get_forecast(regions: tuple, categories: tuple, segments: tuple, months: int):
+    """Cached so moving other widgets doesn't refit the models."""
+    subset = filter_sales(get_data(), regions=list(regions),
+                          categories=list(categories), segments=list(segments))
+    return forecast.run_forecast(subset, horizon=months)
 
 
 def style(fig, height: int = 380):
@@ -117,8 +125,8 @@ if before is None:
 
 # ------------------------------------------------------------------ tabs
 
-overview, products, customers, geography, shipping = st.tabs(
-    ["Overview", "Products", "Customers", "Geography", "Shipping"]
+overview, products, customers, geography, shipping, outlook = st.tabs(
+    ["Overview", "Products", "Customers", "Geography", "Shipping", "Forecast"]
 )
 
 with overview:
@@ -265,3 +273,80 @@ with shipping:
                        "Median": st.column_config.NumberColumn(format="%.0f days"),
                        "Max": st.column_config.NumberColumn(format="%d days")},
     )
+
+with outlook:
+    st.caption(
+        "The forecast uses all dates in the data, so the date filter does not "
+        "apply here. Region, category and segment filters do."
+    )
+    months = st.slider("Months to forecast", 3, 12, 6)
+    try:
+        result = get_forecast(tuple(regions), tuple(categories),
+                              tuple(segments), months)
+    except ValueError as err:
+        st.info(f"Can't forecast this selection: {err} Try widening the filters.")
+        st.stop()
+
+    best = result.backtest.loc[0]
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Model used", result.model, border=True)
+    c2.metric("Backtest error (MAPE)", f"{best['MAPE %']:.1f}%", border=True,
+              help="Average % miss per month when the model, trained on "
+                   "2015 to 2017, predicted 2018. Lower is better.")
+    c3.metric(f"Forecast, next {months} months",
+              money(result.forecast["Forecast"].sum()), border=True)
+    if best["MAPE %"] > 40:
+        st.warning("This selection's monthly sales swing a lot, so the forecast "
+                   "is rough. Treat it as a direction, not a number.")
+
+    history = result.history.iloc[-24:].reset_index()
+    history.columns = ["Month", "Sales"]
+    fc = result.forecast
+    last = history.iloc[-1]
+    fig = px.line(history, x="Month", y="Sales", markers=True,
+                  title="Monthly sales and forecast",
+                  color_discrete_sequence=[ACCENT])
+    fig.data[0].name = "Actual"
+    fig.data[0].showlegend = True
+    fig.add_scatter(x=fc["Month"], y=fc["Upper"], mode="lines",
+                    line={"width": 0}, showlegend=False, hoverinfo="skip")
+    fig.add_scatter(x=fc["Month"], y=fc["Lower"], mode="lines",
+                    line={"width": 0}, fill="tonexty",
+                    fillcolor="rgba(235, 104, 52, 0.15)", name="80% range",
+                    hoverinfo="skip")
+    fig.add_scatter(x=[last["Month"], *fc["Month"]],
+                    y=[last["Sales"], *fc["Forecast"]],
+                    mode="lines+markers", name="Forecast",
+                    line={"color": PALETTE[1], "dash": "dash"})
+    fig.update_traces(hovertemplate="%{x|%b %Y}<br>$%{y:,.0f}<extra></extra>",
+                      selector={"mode": "lines+markers"})
+    fig.update_layout(xaxis_title="", yaxis_title="Sales ($)",
+                      legend={"orientation": "h", "y": 1.08, "x": 1,
+                              "xanchor": "right"})
+    st.plotly_chart(style(fig, height=440), width="stretch")
+
+    left, right = st.columns(2)
+    left.markdown("**Forecast by month**")
+    left.dataframe(
+        fc.assign(Month=fc["Month"].dt.strftime("%b %Y")), hide_index=True,
+        width="stretch",
+        column_config={c: st.column_config.NumberColumn(format="dollar")
+                       for c in ["Forecast", "Lower", "Upper"]},
+    )
+    right.markdown("**How the models did on 2018**")
+    right.dataframe(
+        result.backtest, hide_index=True, width="stretch",
+        column_config={"MAPE %": st.column_config.NumberColumn(format="%.1f%%"),
+                       "MAE $": st.column_config.NumberColumn(format="dollar")},
+    )
+    with st.expander("How does the forecast work?"):
+        st.markdown(
+            "Two models are trained on 2015 to 2017 and asked to predict 2018, "
+            "which we already know. The one that misses by less is used.\n\n"
+            "- **Seasonal naive + growth**: next month looks like the same month "
+            "last year, scaled by last year's growth. A simple baseline.\n"
+            "- **Holt-Winters**: exponential smoothing that learns a trend and a "
+            "repeating yearly pattern, giving more weight to recent months.\n\n"
+            "The shaded range shows where 8 in 10 months would land if the model "
+            "keeps missing by about as much as it did in 2018."
+        )
