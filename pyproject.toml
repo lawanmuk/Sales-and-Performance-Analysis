@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sales-analysis"
-version = "0.2.0"
+version = "1.0.0"
 description = "Sales performance analysis of the Superstore dataset"
 readme = "README.md"
 license = { file = "LICENSE" }
