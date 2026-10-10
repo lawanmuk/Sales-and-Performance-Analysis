@@ -1,0 +1,237 @@
+---
+ CHANGELOG.md   |  24 +++++++
+ README.md      | 171 +++++++++++++++++++++++++++++++++++++++++--------
+ pyproject.toml |   2 +-
+ 3 files changed, 169 insertions(+), 28 deletions(-)
+ create mode 100644 CHANGELOG.md
+
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+new file mode 100644
+index 0000000..9a42136
+--- /dev/null
++++ b/CHANGELOG.md
+@@ -0,0 +1,24 @@
++# Changelog
++
++## 1.0.0 (2026-10-10)
++
++First full release, built over a one week sprint.
++
++### Added
++- Installable package (`pyproject.toml`) with the `sales-analysis` command: `run`, `summary`, `forecast` and `sql`.
++- Streamlit dashboard with sidebar filters, KPI tiles against the previous period, six tabs and CSV download.
++- Eight DuckDB SQL queries that match the pandas results.
++- Six month forecast using Holt-Winters, chosen by a backtest against seasonal naive, with an 80% range.
++- RFM customer segments, Pareto analysis, shipping times, seasonality heatmap and a state map.
++- 55 pytest tests, ruff linting, pre-commit hooks and GitHub Actions CI on Ubuntu and Windows.
++
++### Changed
++- `requirements.txt` replaced by `pyproject.toml` as the single source of dependencies.
++- Charts are reproducible: the same input gives byte identical PNG and HTML files.
++- README rewritten with figures checked against the code.
++
++### Fixed
++- Order dates are parsed as day first (dd/mm/yyyy), so days and months are no longer swapped.
++- Duplicate order lines are removed before any metric is calculated.
++- A seaborn palette warning when a chart has more years than palette colours.
++- Windows on ARM installs need 64-bit Python for numpy and pyarrow, now documented in the README.
+diff --git a/README.md b/README.md
+index 627e4cd..931f029 100644
+--- a/README.md
++++ b/README.md
+@@ -1,35 +1,152 @@
+-# 📊 Sales Performance Analysis
+-A data analysis project exploring sales trends, top products, and customer behavior.
++# Sales Performance Analysis
+
+-## 🛠️ Tools
+-- Python (pandas, Matplotlib, seaborn, Plotly)
+-- SQL (DuckDB)
+-- Forecasting (statsmodels Holt-Winters)
+-- Streamlit (interactive dashboard)
++[![CI](https://github.com/lawanmuk/Sales-and-Performance-Analysis/actions/workflows/ci.yml/badge.svg)](https://github.com/lawanmuk/Sales-and-Performance-Analysis/actions/workflows/ci.yml)
+
+-## 📌 Key Insights
+-1. **Top Category**: Technology generates the highest sales.
+-2. **Best Months**: November and December are the strongest months, with November about 86% above the monthly average.
+-3. **Regional Trend**: West region outperforms others.
++This project looks at four years of sales for a retail superstore (2015 to 2018) and answers the usual questions: what sells, where, to whom, how fast it ships, and where sales are heading. It comes as a command line tool, an interactive dashboard, and a set of SQL queries that give the same answers as the Python code.
+
+-## 🚀 How to Run
+-1. Clone the repo and create a virtual environment.
+-2. Install the project: `pip install -e .`
+-3. Build all charts: `sales-analysis run` (add `--show` to open them)
+-4. See headline numbers: `sales-analysis summary`
++## What's included
+
+-## 📈 Dashboard
+-Install the extras and launch it:
++- **Charts**: 14 charts saved to `visuals/`, as PNG files for reports and HTML for the interactive map and product chart.
++- **Metrics**: sales by category, region, state, segment and product, year on year growth, seasonality, shipping times, Pareto analysis and RFM customer segments.
++- **Dashboard**: a Streamlit app with filters, KPI tiles that compare against the previous period, and a CSV download.
++- **SQL**: eight DuckDB queries, tested against the pandas results.
++- **Forecast**: a six month sales forecast with a backtest that picks the better of two models.
++- **Tests and CI**: 55 pytest tests, ruff linting, pre-commit hooks, and GitHub Actions on Ubuntu and Windows.
+
+-    pip install -e ".[dashboard]"
+-    streamlit run app/dashboard.py
++## Key findings
+
+-Filter by date, region, category and segment, compare against the previous period, see a 6 month forecast and download the filtered data as CSV.
++These numbers come from `sales-analysis summary` on the cleaned data.
+
+-## 🗄️ SQL and Forecast
+-    pip install -e ".[sql]"
+-    sales-analysis sql --list            # see the 8 queries
+-    sales-analysis sql top_products      # run one with DuckDB
+-    sales-analysis forecast              # backtest models and forecast 6 months
++- Total sales are $2,261,255 across 4,922 orders and 793 customers, from 2015-01-03 to 2018-12-30. The average order is worth $459.42.
++- Technology is the largest category, at 37% of sales.
++- November is the strongest month, 86% above an average month.
++- Sales grew 20.3% in 2018.
++- The West leads the regions with 31% of sales.
++- Consumer customers bring in 51% of sales.
++- 23% of products make up 80% of sales.
++- Champion customers (the top RFM segment) account for 36% of sales.
++- Standard Class orders take 5.0 days to ship on average.
+
+-The queries live in `src/sales_analysis/queries/` and use window functions, CTEs and NTILE scoring.
+\ No newline at end of file
++![Seasonality heatmap](visuals/seasonality_heatmap.png)
++
++## Getting started
++
++You need Python 3.10 or newer.
++
++```bash
++git clone https://github.com/lawanmuk/Sales-and-Performance-Analysis.git
++cd Sales-and-Performance-Analysis
++python -m venv .venv
++source .venv/bin/activate          # Windows: .venv\Scripts\activate
++pip install -e ".[dashboard,sql]"
++```
++
++Then try the two main commands:
++
++```bash
++sales-analysis summary     # headline numbers and key insights
++sales-analysis run         # build every chart into visuals/ (add --show to open them)
++```
++
++### Windows on ARM
++
++Some packages, including numpy and pyarrow (used by Streamlit), don't have prebuilt wheels for Windows on ARM yet. If pip tries to build them from source and fails, install the 64-bit Python 3.13 from python.org and create the virtual environment with that. To check which build you're on, run:
++
++```bash
++python -c "import sysconfig; print(sysconfig.get_platform())"
++```
++
++It should print `win-amd64`.
++
++## Dashboard
++
++```bash
++streamlit run app/dashboard.py
++```
++
++Filter by date, region, category and segment. The KPI tiles compare each figure against the previous period of the same length. The tabs cover Overview, Products, Customers, Geography, Shipping and Forecast. You can download the filtered data as a CSV.
++
++## SQL
++
++```bash
++sales-analysis sql --list                  # the eight available queries
++sales-analysis sql top_products            # run one with DuckDB
++sales-analysis sql rfm_segments --show-sql # print the SQL as well
++```
++
++The queries live in `src/sales_analysis/queries/`. They use window functions, CTEs and NTILE scoring, and they return the same numbers as the pandas code. Each one reads the CSV through a `sales` view, so you can also open the files in the DuckDB CLI or a tool like DBeaver.
++
++## Forecast
++
++```bash
++sales-analysis forecast               # six months ahead
++sales-analysis forecast --months 12   # or any other horizon
++```
++
++The two models are trained on 2015 to 2017 and scored on 2018. Holt-Winters (a damped trend with yearly seasonality) beat seasonal naive with growth, with a MAPE of 18.1% against 28.7%. That's the model used for the forecast. The forecast for 2019:
++
++| Month    | Forecast | Lower    | Upper    |
++| -------- | -------- | -------- | -------- |
++| Jan 2019 | $49,033  | $31,677  | $66,389  |
++| Feb 2019 | $41,195  | $23,839  | $58,551  |
++| Mar 2019 | $72,166  | $54,810  | $89,522  |
++| Apr 2019 | $60,576  | $43,220  | $77,932  |
++| May 2019 | $67,529  | $50,172  | $84,885  |
++| Jun 2019 | $62,588  | $45,232  | $79,944  |
++
++The Lower and Upper columns form an 80% band, about $17,400 on either side of each forecast. It's based on the typical miss on the 2018 holdout. Four years of monthly data is a small sample for seasonality, so treat the band as a rough guide.
++
++![Sales forecast](visuals/sales_forecast.png)
++
++## Charts
++
++Running `sales-analysis run` writes these to `visuals/`:
++
++- `monthly_sales.png`, `yearly_growth.png`, `seasonality_heatmap.png`
++- `sales_by_category.png`, `sales_by_region.png`, `sales_by_segment.png`, `subcategory_sales.png`
++- `top_products.png`, `pareto_curve.png`, `rfm_segments.png`
++- `shipping_times.png`, `sales_forecast.png`
++- `sales_by_state_map.html` and `top_products_interactive.html`, which open in any browser
++
++## Data
++
++The sales file is `data/train.csv`. The cleaning step in `src/sales_analysis/data.py`:
++
++- reads order dates as day, month, year
++- zero pads postal codes to five digits
++- removes duplicate order lines (rows identical apart from the Row ID)
++- adds Year, Month, Quarter and Ship Days columns
++
++If your file lives somewhere else, pass `--data path/to/file.csv` to any command.
++
++## Project layout
++
++```
++app/dashboard.py          Streamlit dashboard
++data/                     the sales CSV
++src/sales_analysis/
++  cli.py                  command line entry point
++  data.py                 loading and cleaning
++  metrics.py              aggregations (no plotting)
++  plots.py                chart functions
++  filters.py              dashboard filters and previous period
++  forecast.py             models, backtest and forecast
++  sql.py                  DuckDB runner
++  queries/                SQL files
++tests/                    pytest suite and a small hand checked dataset
++visuals/                  generated charts
++```
++
++## Tests and quality
++
++```bash
++pytest                                   # 55 tests, 93% coverage
++ruff check . && ruff format --check .    # lint and format check
++pre-commit install                       # run the checks before every commit
++```
++
++GitHub Actions runs the lint check, the test suite on Ubuntu and Windows with Python 3.11 and 3.13, and then rebuilds the charts.
++
++## Author
++
++Mukhtar Lawan. See `LICENSE` for the license terms.
+diff --git a/pyproject.toml b/pyproject.toml
+index 0e6cb40..7787dbc 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
+
+ [project]
+ name = "sales-analysis"
+-version = "0.2.0"
++version = "1.0.0"
+ description = "Sales performance analysis of the Superstore dataset"
+ readme = "README.md"
+ license = { file = "LICENSE" }
+--
+2.43.0
