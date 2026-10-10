@@ -1,0 +1,9 @@
+Row ID,Order ID,Order Date,Ship Date,Ship Mode,Customer ID,Customer Name,Segment,Country,City,State,Postal Code,Region,Product ID,Category,Sub-Category,Product Name,Sales
+1,O-1,05/01/2017,07/01/2017,First Class,C-1,Ann Lee,Consumer,United States,Seattle,Washington,98103,West,P-1,Technology,Phones,Phone A,500.00
+2,O-1,05/01/2017,07/01/2017,First Class,C-1,Ann Lee,Consumer,United States,Seattle,Washington,98103,West,P-2,Furniture,Chairs,"Chair A, Black",300.00
+3,O-2,10/02/2017,15/02/2017,Standard Class,C-2,Bob Ray,Corporate,United States,Burlington,Vermont,,East,P-3,Office Supplies,Paper,Paper A,50.00
+4,O-3,20/11/2017,20/11/2017,Same Day,C-3,Cat Doe,Home Office,United States,Burlington,Vermont,5401,East,P-1,Technology,Phones,Phone A,250.00
+5,O-4,03/03/2018,06/03/2018,Second Class,C-1,Ann Lee,Consumer,United States,Seattle,Washington,98103,West,P-4,Office Supplies,Binders,Binder A,100.00
+6,O-4,03/03/2018,06/03/2018,Second Class,C-1,Ann Lee,Consumer,United States,Seattle,Washington,98103,West,P-4,Office Supplies,Binders,Binder A,100.00
+7,O-5,15/11/2018,20/11/2018,Standard Class,C-2,Bob Ray,Corporate,United States,Houston,Texas,77095,Central,P-2,Furniture,Chairs,"Chair A, Black",600.00
+8,O-6,01/12/2018,03/12/2018,First Class,C-4,Dan Fox,Consumer,United States,Jacksonville,Florida,32216,South,P-1,Technology,Phones,Phone A,950.00
