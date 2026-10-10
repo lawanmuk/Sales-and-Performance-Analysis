@@ -4,10 +4,23 @@ from pathlib import Path
 
 import pandas as pd
 
+DATE_FORMAT = "%d/%m/%Y"
+
 REQUIRED_COLUMNS = [
-    "Order ID", "Order Date", "Ship Date", "Ship Mode", "Customer ID",
-    "Segment", "City", "State", "Postal Code", "Region",
-    "Category", "Sub-Category", "Product Name", "Sales",
+    "Order ID",
+    "Order Date",
+    "Ship Date",
+    "Ship Mode",
+    "Customer ID",
+    "Segment",
+    "City",
+    "State",
+    "Postal Code",
+    "Region",
+    "Category",
+    "Sub-Category",
+    "Product Name",
+    "Sales",
 ]
 
 
@@ -23,14 +36,12 @@ def clean(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
 
     # Dates are stored day first, e.g. 08/11/2017 is 8 November 2017
-    df["Order Date"] = pd.to_datetime(df["Order Date"], dayfirst=True)
-    df["Ship Date"] = pd.to_datetime(df["Ship Date"], dayfirst=True)
+    df["Order Date"] = pd.to_datetime(df["Order Date"], format=DATE_FORMAT)
+    df["Ship Date"] = pd.to_datetime(df["Ship Date"], format=DATE_FORMAT)
 
     # Postal codes are read as floats because a few are missing. Store them
     # as 5 character strings so leading zeros survive (e.g. 05401).
-    df["Postal Code"] = (
-        df["Postal Code"].astype("Int64").astype("string").str.zfill(5)
-    )
+    df["Postal Code"] = df["Postal Code"].astype("Int64").astype("string").str.zfill(5)
 
     # The same order line can appear twice with a different Row ID
     subset = [col for col in df.columns if col != "Row ID"]
