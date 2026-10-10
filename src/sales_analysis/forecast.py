@@ -36,7 +36,7 @@ def _future_index(series: pd.Series, horizon: int) -> pd.DatetimeIndex:
 
 def seasonal_naive(train: pd.Series, horizon: int) -> pd.Series:
     """Same month last year, times the growth of the last 12 months."""
-    growth = train.iloc[-SEASON:].sum() / train.iloc[-2 * SEASON:-SEASON].sum()
+    growth = train.iloc[-SEASON:].sum() / train.iloc[-2 * SEASON : -SEASON].sum()
     last_year = train.iloc[-SEASON:].to_numpy()
     values = np.resize(last_year, horizon) * growth
     return pd.Series(values, index=_future_index(train, horizon))
@@ -45,8 +45,11 @@ def seasonal_naive(train: pd.Series, horizon: int) -> pd.Series:
 def holt_winters(train: pd.Series, horizon: int) -> pd.Series:
     """Holt-Winters with damped additive trend and additive seasonality."""
     model = ExponentialSmoothing(
-        train.to_numpy(), trend="add", damped_trend=True,
-        seasonal="add", seasonal_periods=SEASON,
+        train.to_numpy(),
+        trend="add",
+        damped_trend=True,
+        seasonal="add",
+        seasonal_periods=SEASON,
     )
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")  # convergence chatter on small data
@@ -76,10 +79,10 @@ def mae(actual: pd.Series, predicted: pd.Series) -> float:
 @dataclass
 class ForecastResult:
     model: str
-    backtest: pd.DataFrame     # one row per model: MAPE, MAE
-    holdout: pd.DataFrame      # Month, Actual and one column per model
-    history: pd.Series         # all monthly sales used for the final fit
-    forecast: pd.DataFrame     # Month, Forecast, Lower, Upper
+    backtest: pd.DataFrame  # one row per model: MAPE, MAE
+    holdout: pd.DataFrame  # Month, Actual and one column per model
+    history: pd.Series  # all monthly sales used for the final fit
+    forecast: pd.DataFrame  # Month, Forecast, Lower, Upper
 
 
 def run_forecast(df: pd.DataFrame, horizon: int = 6, holdout: int = 12) -> ForecastResult:
@@ -90,14 +93,10 @@ def run_forecast(df: pd.DataFrame, horizon: int = 6, holdout: int = 12) -> Forec
     """
     series = monthly_series(df)
     if len(series) < holdout + 2 * SEASON:
-        raise ValueError(
-            f"Need at least {holdout + 2 * SEASON} months of data, got {len(series)}."
-        )
+        raise ValueError(f"Need at least {holdout + 2 * SEASON} months of data, got {len(series)}.")
     empty_share = float((series == 0).mean())
     if empty_share > MAX_EMPTY_SHARE:
-        raise ValueError(
-            f"{empty_share:.0%} of months have no sales, too sparse to forecast."
-        )
+        raise ValueError(f"{empty_share:.0%} of months have no sales, too sparse to forecast.")
 
     train, test = series.iloc[:-holdout], series.iloc[-holdout:]
     holdout_table = pd.DataFrame({"Actual": test})
@@ -106,8 +105,7 @@ def run_forecast(df: pd.DataFrame, horizon: int = 6, holdout: int = 12) -> Forec
         predicted = model(train, holdout)
         predicted.index = test.index
         holdout_table[name] = predicted
-        rows.append({"Model": name, "MAPE %": mape(test, predicted),
-                     "MAE $": mae(test, predicted)})
+        rows.append({"Model": name, "MAPE %": mape(test, predicted), "MAE $": mae(test, predicted)})
     backtest = pd.DataFrame(rows).sort_values("MAPE %").reset_index(drop=True)
     best = backtest.loc[0, "Model"]
 
@@ -115,12 +113,15 @@ def run_forecast(df: pd.DataFrame, horizon: int = 6, holdout: int = 12) -> Forec
     spread = float((holdout_table["Actual"] - holdout_table[best]).std(ddof=1))
 
     point = MODELS[best](series, horizon)
-    forecast = pd.DataFrame({
-        "Forecast": point,
-        "Lower": np.clip(point - Z_80 * spread, 0, None),
-        "Upper": point + Z_80 * spread,
-    })
+    forecast = pd.DataFrame(
+        {
+            "Forecast": point,
+            "Lower": np.clip(point - Z_80 * spread, 0, None),
+            "Upper": point + Z_80 * spread,
+        }
+    )
     forecast.index.name = "Month"
     holdout_table.index.name = "Month"
-    return ForecastResult(best, backtest, holdout_table.reset_index(),
-                          series, forecast.reset_index())
+    return ForecastResult(
+        best, backtest, holdout_table.reset_index(), series, forecast.reset_index()
+    )

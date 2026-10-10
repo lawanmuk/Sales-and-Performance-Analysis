@@ -3,25 +3,64 @@
 import pandas as pd
 
 STATE_CODES = {
-    "Alabama": "AL", "Alaska": "AK", "Arizona": "AZ", "Arkansas": "AR",
-    "California": "CA", "Colorado": "CO", "Connecticut": "CT", "Delaware": "DE",
-    "District of Columbia": "DC", "Florida": "FL", "Georgia": "GA", "Hawaii": "HI",
-    "Idaho": "ID", "Illinois": "IL", "Indiana": "IN", "Iowa": "IA", "Kansas": "KS",
-    "Kentucky": "KY", "Louisiana": "LA", "Maine": "ME", "Maryland": "MD",
-    "Massachusetts": "MA", "Michigan": "MI", "Minnesota": "MN", "Mississippi": "MS",
-    "Missouri": "MO", "Montana": "MT", "Nebraska": "NE", "Nevada": "NV",
-    "New Hampshire": "NH", "New Jersey": "NJ", "New Mexico": "NM", "New York": "NY",
-    "North Carolina": "NC", "North Dakota": "ND", "Ohio": "OH", "Oklahoma": "OK",
-    "Oregon": "OR", "Pennsylvania": "PA", "Rhode Island": "RI",
-    "South Carolina": "SC", "South Dakota": "SD", "Tennessee": "TN", "Texas": "TX",
-    "Utah": "UT", "Vermont": "VT", "Virginia": "VA", "Washington": "WA",
-    "West Virginia": "WV", "Wisconsin": "WI", "Wyoming": "WY",
+    "Alabama": "AL",
+    "Alaska": "AK",
+    "Arizona": "AZ",
+    "Arkansas": "AR",
+    "California": "CA",
+    "Colorado": "CO",
+    "Connecticut": "CT",
+    "Delaware": "DE",
+    "District of Columbia": "DC",
+    "Florida": "FL",
+    "Georgia": "GA",
+    "Hawaii": "HI",
+    "Idaho": "ID",
+    "Illinois": "IL",
+    "Indiana": "IN",
+    "Iowa": "IA",
+    "Kansas": "KS",
+    "Kentucky": "KY",
+    "Louisiana": "LA",
+    "Maine": "ME",
+    "Maryland": "MD",
+    "Massachusetts": "MA",
+    "Michigan": "MI",
+    "Minnesota": "MN",
+    "Mississippi": "MS",
+    "Missouri": "MO",
+    "Montana": "MT",
+    "Nebraska": "NE",
+    "Nevada": "NV",
+    "New Hampshire": "NH",
+    "New Jersey": "NJ",
+    "New Mexico": "NM",
+    "New York": "NY",
+    "North Carolina": "NC",
+    "North Dakota": "ND",
+    "Ohio": "OH",
+    "Oklahoma": "OK",
+    "Oregon": "OR",
+    "Pennsylvania": "PA",
+    "Rhode Island": "RI",
+    "South Carolina": "SC",
+    "South Dakota": "SD",
+    "Tennessee": "TN",
+    "Texas": "TX",
+    "Utah": "UT",
+    "Vermont": "VT",
+    "Virginia": "VA",
+    "Washington": "WA",
+    "West Virginia": "WV",
+    "Wisconsin": "WI",
+    "Wyoming": "WY",
 }
 
 SHIP_MODE_ORDER = ["Same Day", "First Class", "Second Class", "Standard Class"]
 
 
 # ---------------------------------------------------------------- overview
+
 
 def sales_by_category(df: pd.DataFrame) -> pd.Series:
     """Total sales per category, largest first."""
@@ -43,6 +82,7 @@ def summary(df: pd.DataFrame) -> dict:
 
 # ---------------------------------------------------------------- time
 
+
 def monthly_sales(df: pd.DataFrame) -> pd.DataFrame:
     """Total sales for every year and month, with columns Year, Month, Sales."""
     return df.groupby(["Year", "Month"])["Sales"].sum().reset_index()
@@ -57,11 +97,9 @@ def yearly_sales(df: pd.DataFrame) -> pd.DataFrame:
 
 def seasonality(df: pd.DataFrame) -> pd.DataFrame:
     """Sales as a Year x Month grid (rows are years, columns are months 1 to 12)."""
-    return (
-        df.pivot_table(index="Year", columns="Month", values="Sales",
-                       aggfunc="sum", fill_value=0)
-        .reindex(columns=range(1, 13), fill_value=0)
-    )
+    return df.pivot_table(
+        index="Year", columns="Month", values="Sales", aggfunc="sum", fill_value=0
+    ).reindex(columns=range(1, 13), fill_value=0)
 
 
 def month_index(df: pd.DataFrame) -> pd.Series:
@@ -71,6 +109,7 @@ def month_index(df: pd.DataFrame) -> pd.Series:
 
 
 # ---------------------------------------------------------------- geography
+
 
 def sales_by_region(df: pd.DataFrame) -> pd.Series:
     """Total sales per region, largest first."""
@@ -90,11 +129,10 @@ def sales_by_state(df: pd.DataFrame) -> pd.DataFrame:
 
 # ---------------------------------------------------------------- customers
 
+
 def sales_by_segment(df: pd.DataFrame) -> pd.DataFrame:
     """Sales, customers and sales per customer for each segment."""
-    seg = df.groupby("Segment").agg(
-        Sales=("Sales", "sum"), Customers=("Customer ID", "nunique")
-    )
+    seg = df.groupby("Segment").agg(Sales=("Sales", "sum"), Customers=("Customer ID", "nunique"))
     seg["Sales per Customer"] = seg["Sales"] / seg["Customers"]
     return seg.sort_values("Sales", ascending=False)
 
@@ -147,7 +185,7 @@ def rfm(df: pd.DataFrame) -> pd.DataFrame:
     table["F"] = _score(table["Frequency"])
     table["M"] = _score(table["Monetary"])
     table["Segment"] = [
-        _rfm_segment(r, f, m) for r, f, m in zip(table["R"], table["F"], table["M"])
+        _rfm_segment(r, f, m) for r, f, m in zip(table["R"], table["F"], table["M"], strict=True)
     ]
     return table
 
@@ -155,14 +193,13 @@ def rfm(df: pd.DataFrame) -> pd.DataFrame:
 def rfm_summary(df: pd.DataFrame) -> pd.DataFrame:
     """Customers and sales per RFM segment, in a fixed best to worst order."""
     table = rfm(df)
-    out = table.groupby("Segment").agg(
-        Customers=("Monetary", "size"), Sales=("Monetary", "sum")
-    )
+    out = table.groupby("Segment").agg(Customers=("Monetary", "size"), Sales=("Monetary", "sum"))
     out["Share of Sales %"] = out["Sales"] / out["Sales"].sum() * 100
     return out.reindex(RFM_SEGMENTS).fillna(0)
 
 
 # ---------------------------------------------------------------- shipping
+
 
 def shipping_times(df: pd.DataFrame) -> pd.DataFrame:
     """Average, median and max days from order to shipping per ship mode."""
@@ -176,6 +213,7 @@ def shipping_times(df: pd.DataFrame) -> pd.DataFrame:
 
 # ---------------------------------------------------------------- products
 
+
 def top_products(df: pd.DataFrame, n: int = 5) -> pd.Series:
     """The ``n`` products with the highest total sales, largest first."""
     return df.groupby("Product Name")["Sales"].sum().nlargest(n)
@@ -184,7 +222,8 @@ def top_products(df: pd.DataFrame, n: int = 5) -> pd.Series:
 def subcategory_sales(df: pd.DataFrame) -> pd.DataFrame:
     """Sales per sub-category with its parent category, largest first."""
     return (
-        df.groupby(["Category", "Sub-Category"])["Sales"].sum()
+        df.groupby(["Category", "Sub-Category"])["Sales"]
+        .sum()
         .reset_index()
         .sort_values("Sales", ascending=False)
         .reset_index(drop=True)
@@ -208,6 +247,7 @@ def products_for_share(df: pd.DataFrame, share: float = 80.0) -> float:
 
 
 # ---------------------------------------------------------------- insights
+
 
 def insights(df: pd.DataFrame) -> dict:
     """Key findings, computed from the data so the README never goes stale."""
