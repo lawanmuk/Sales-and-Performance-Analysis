@@ -1,0 +1,113 @@
+From db25983e757bb3f576a08badba513fa11172ce87 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sat, 10 Oct 2026 10:17:22 +0000
+Subject: [PATCH] ci: add GitHub Actions workflow and pre-commit config
+
+Lint, test on Ubuntu and Windows with Python 3.11 and 3.13, and build
+the charts as a downloadable artifact on every push and pull request.
+Pre-commit runs ruff and basic file checks before each commit.
+
+Co-Authored-By: Claude Haiku 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01DPPT7Hprg9r5FNBBWsZPzd
+---
+ .github/workflows/ci.yml | 59 ++++++++++++++++++++++++++++++++++++++++
+ .pre-commit-config.yaml  | 22 +++++++++++++++
+ 2 files changed, 81 insertions(+)
+ create mode 100644 .github/workflows/ci.yml
+ create mode 100644 .pre-commit-config.yaml
+
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+new file mode 100644
+index 0000000..5dd4743
+--- /dev/null
++++ b/.github/workflows/ci.yml
+@@ -0,0 +1,59 @@
++name: CI
++
++on:
++  push:
++    branches: [main]
++  pull_request:
++
++jobs:
++  lint:
++    runs-on: ubuntu-latest
++    steps:
++      - uses: actions/checkout@v5
++      - uses: actions/setup-python@v6
++        with:
++          python-version: "3.13"
++      - run: pip install ruff
++      - run: ruff check .
++      - run: ruff format --check .
++
++  test:
++    name: test (${{ matrix.os }}, py${{ matrix.python }})
++    runs-on: ${{ matrix.os }}
++    strategy:
++      fail-fast: false
++      matrix:
++        os: [ubuntu-latest, windows-latest]
++        python: ["3.11", "3.13"]
++    steps:
++      - uses: actions/checkout@v5
++      - uses: actions/setup-python@v6
++        with:
++          python-version: ${{ matrix.python }}
++          cache: pip
++          cache-dependency-path: pyproject.toml
++      - run: pip install -e ".[dev]"
++      - run: pytest --cov=sales_analysis --cov-report=term-missing
++        env:
++          MPLBACKEND: Agg
++
++  charts:
++    # Builds every chart from the full dataset and attaches them to the run,
++    # so you can download and check them from the Actions tab.
++    needs: test
++    runs-on: ubuntu-latest
++    steps:
++      - uses: actions/checkout@v5
++      - uses: actions/setup-python@v6
++        with:
++          python-version: "3.13"
++          cache: pip
++          cache-dependency-path: pyproject.toml
++      - run: pip install -e .
++      - run: sales-analysis run --output charts
++        env:
++          MPLBACKEND: Agg
++      - uses: actions/upload-artifact@v5
++        with:
++          name: charts
++          path: charts/
+diff --git a/.pre-commit-config.yaml b/.pre-commit-config.yaml
+new file mode 100644
+index 0000000..33322bd
+--- /dev/null
++++ b/.pre-commit-config.yaml
+@@ -0,0 +1,22 @@
++# Runs before every commit. Set up once with:  pre-commit install
++# Run on everything by hand with:              pre-commit run --all-files
++exclude: ^(data|visuals)/
++
++repos:
++  - repo: https://github.com/pre-commit/pre-commit-hooks
++    rev: v6.0.0
++    hooks:
++      - id: trailing-whitespace
++        args: [--markdown-linebreak-ext=md]
++      - id: end-of-file-fixer
++      - id: check-yaml
++      - id: check-toml
++      - id: check-added-large-files
++        args: [--maxkb=1000]
++
++  - repo: https://github.com/astral-sh/ruff-pre-commit
++    rev: v0.16.8
++    hooks:
++      - id: ruff-check
++        args: [--fix]
++      - id: ruff-format
+--
+2.43.0
